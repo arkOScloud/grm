@@ -10,6 +10,19 @@ from django.conf import settings
 from main.models import UploadedFile
 from main.forms import UploadedFileForm
 
+def read_configs():
+	pluginlist = []
+	pluginbase = settings.MEDIA_ROOT + settings.UPLOADEDFILE_ROOT
+	for plugin in os.listdir(pluginbase):
+		lookhere = pluginbase + plugin + '/__init__.py'
+		import imp
+		f = open(lookhere)
+		data = imp.load_source('data', '', f)
+		f.close()
+		entry = {'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': data.MODULES, 'platforms': data.PLATFORMS, 'version': data.VERSION, 'deps': data.DEPS, 'icon': settings.HOSTNAME + u'/genesis/' + plugin + u'/icon.png', 'homepage': data.HOMEPAGE, 'id': plugin, 'name': data.NAME}
+		pluginlist.append(entry)
+	return pluginlist
+
 def index(request):
 	return (render(request, 'index.html'))
 
@@ -41,3 +54,9 @@ def file(request, filename):
 			except:
 				return render(request, 'error.html', {'error': 'Unexpected error'})
 	return render(request, 'error.html', {'error': 'The file does not exist'})
+
+def show_list(request):
+	pluginlist = read_configs()
+	response = HttpResponse(mimetype='text/html')
+	response.write(pluginlist)
+	return response
