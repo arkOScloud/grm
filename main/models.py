@@ -15,6 +15,7 @@ class UploadedFile(models.Model):
 	DEPS = models.CharField(max_length=255, default=[])
 	ICON = models.ImageField(upload_to=settings.ICON_FOLDER)
 	HOMEPAGE = models.CharField(max_length=255, default="")
+	BACKUP = models.BooleanField(default=False)
 	PLUGIN_ID = models.CharField(max_length=255, default="")
 
 	def __unicode__(self):

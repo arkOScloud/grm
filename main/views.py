@@ -6,15 +6,14 @@ import sys
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.conf import settings
-from django.core.files.storage import default_storage
 from django.core.files import File
 
-from main.models import UploadedFile, BackupFile
+from main.models import UploadedFile
 from main.forms import UploadedFileForm
 
 def reload_list():
 	pluginlist = []
-	plugins = UploadedFile.objects.all()
+	plugins = UploadedFile.objects.filter(BACKUP=False)
 	for data in plugins:
 		entry = {'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': data.MODULES, 'platforms': data.PLATFORMS, 'version': data.VERSION, 'deps': data.DEPS, 'icon': settings.HOSTNAME + '/icon/' + data.PLUGIN_ID, 'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 'name': data.name}
 		pluginlist.append(entry)
@@ -45,11 +44,8 @@ def upload(request):
 				return render(request, 'error.html', {'error': 'Malformed archive. Please resubmit in accordance with Genesis Plugin API guidelines.'})
 
 			if UploadedFile.objects.filter(PLUGIN_ID=directory).exists():
-				oldfile = UploadedFile.objects.get(PLUGIN_ID=directory)
-				newname = settings.MEDIA_ROOT + settings.UPLOADEDFILE_ROOT + oldfile.PLUGIN_ID + '_' + oldfile.VERSION + '.tar.gz'
-				subprocess.call(['mv', oldfile.data_file.path, newname])
-				subprocess.call(['rm', oldfile.ICON.path])
-				UploadedFile.objects.filter(PLUGIN_ID=directory).delete()
+				backup(UploadedFile.objects.get(PLUGIN_ID=directory))
+
 			file.name = data.NAME
 			file.DESCRIPTION = data.DESCRIPTION
 			file.AUTHOR = data.AUTHOR
@@ -60,6 +56,7 @@ def upload(request):
 			file.HOMEPAGE = data.HOMEPAGE
 			file.PLUGIN_ID = directory
 			file.ICON.save(directory + '.png', File(open(temp + directory + '/files/icon.png')))
+			file.BACKUP = False
 
 			subprocess.call(['rm', '-r', temp + directory])
 
@@ -106,6 +103,10 @@ def icon(request, id):
 			except:
 				return render(request, 'error.html', {'error': 'Unexpected error'})
 	return render(request, 'error.html', {'error': 'The file does not exist'})
+
+def backup(obj):
+	obj.BACKUP = True
+	obj.save()
 
 def show_list(request):
 	pluginlist = reload_list()
