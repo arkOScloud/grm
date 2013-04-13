@@ -27,14 +27,16 @@ def upload(request):
 		form = UploadedFileForm(request.POST, request.FILES)
 		keys = SecretKey.objects.all()
 
-		# Check validity of provided secret key
-		try:
-			SecretKey.objects.get(key=request.POST['secret_key'])
-		except:
-			return render(request, 'error.html', {'error': 'Secret key incorrect'})
+		if not form.is_valid():
+			return render(request, 'upload.html', {'form': form})
 
-		# Only upload the file if it is a gzipped archive
 		if request.FILES['data_file'].content_type == 'application/gzip':
+			# Check validity of provided secret key
+			try:
+				SecretKey.objects.get(key=request.POST['secret_key'])
+			except:
+				return render(request, 'upload.html', {'form': form, 'message': 'Secret key incorrect', type: 'alert-error'})
+
 			newfile = UploadedFile(name=request.FILES['data_file'].name, data_file=request.FILES['data_file'], secret_key=request.POST['secret_key'])
 			newfile.save()
 
@@ -51,9 +53,7 @@ def upload(request):
 			except:
 				newfile.delete()
 				subprocess.call(['rm', '-r', temp + directory])
-				return render(request, 'error.html', {'error': 'Malformed archive. Please resubmit in accordance with Genesis Plugin API guidelines.'})
-			finally:
-				subprocess.call(['rm', '-r', temp + directory])
+				return render(request, 'upload.html', {'form': form, 'message': 'Malformed archive. Please resubmit in accordance with Genesis Plugin API guidelines.', type: 'alert-error'})
 
 			# Create a backup if a matching plugin already exists
 			if UploadedFile.objects.filter(PLUGIN_ID=directory).exists():
@@ -72,8 +72,13 @@ def upload(request):
 			file.ICON.save(directory + '.png', File(open(temp + directory + '/files/icon.png')))
 			file.BACKUP = False
 
+			subprocess.call(['rm', '-r', temp + directory])
+
+			# Display success message
+			return render(request, 'upload.html', {'form': form, 'message': 'Upload successful!', type: 'alert-success'})
+
 		else:
-			return render(request, 'error.html', {'error': 'Form not valid, or file not of acceptable type'})
+			return render(request, 'upload.html', {'form': form, 'message': 'Form not valid, or file not of acceptable type', type: 'alert-error'})
 	else:
 		form = UploadedFileForm()
 	return render(request, 'upload.html', {'form': form})
