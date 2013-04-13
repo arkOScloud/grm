@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
 
-from main.models import UploadedFile
+from main.models import UploadedFile, SecretKey
 
 class UploadedFileForm(forms.ModelForm):
 	class Meta:
@@ -11,3 +11,7 @@ class UploadedFileForm(forms.ModelForm):
 class AdminUploadedFileForm(admin.ModelAdmin):
 	model = UploadedFile
 	list_display = ('BACKUP', 'name', 'VERSION', 'data_file')
+
+class SecretKeyForm(admin.ModelAdmin):
+	class Meta:
+		model = SecretKey

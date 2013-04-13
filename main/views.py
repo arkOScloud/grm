@@ -8,7 +8,7 @@ from django.shortcuts import render
 from django.conf import settings
 from django.core.files import File
 
-from main.models import UploadedFile
+from main.models import UploadedFile, SecretKey
 from main.forms import UploadedFileForm
 
 def reload_list():
@@ -25,13 +25,23 @@ def index(request):
 def upload(request):
 	if request.method == 'POST':
 		form = UploadedFileForm(request.POST, request.FILES)
+		keys = SecretKey.objects.all()
+
+		# Check validity of provided secret key
+		try:
+			SecretKey.objects.get(key=request.POST['secret_key'])
+		except:
+			return render(request, 'error.html', {'error': 'Secret key incorrect'})
+
+		# Only upload the file if it is a gzipped archive
 		if request.FILES['data_file'].content_type == 'application/gzip':
-			newfile = UploadedFile(name=request.FILES['data_file'].name, data_file=request.FILES['data_file'])
+			newfile = UploadedFile(name=request.FILES['data_file'].name, data_file=request.FILES['data_file'], secret_key=request.POST['secret_key'])
 			newfile.save()
 
 			file = UploadedFile.objects.get(name=request.FILES['data_file'].name)
 			temp = settings.MEDIA_ROOT + settings.TEMP_FOLDER
 
+			# Untar the archive to a temp location and read its data
 			untar = subprocess.Popen(['tar', 'xvzf', file.data_file.path, '-C', temp], stdout=subprocess.PIPE)
 			comm = untar.communicate()[0]
 			comm = comm.split('\n')[0]
@@ -42,10 +52,14 @@ def upload(request):
 				newfile.delete()
 				subprocess.call(['rm', '-r', temp + directory])
 				return render(request, 'error.html', {'error': 'Malformed archive. Please resubmit in accordance with Genesis Plugin API guidelines.'})
+			finally:
+				subprocess.call(['rm', '-r', temp + directory])
 
+			# Create a backup if a matching plugin already exists
 			if UploadedFile.objects.filter(PLUGIN_ID=directory).exists():
 				backup(UploadedFile.objects.get(PLUGIN_ID=directory))
 
+			# Update the database with the new plugin data
 			file.name = data.NAME
 			file.DESCRIPTION = data.DESCRIPTION
 			file.AUTHOR = data.AUTHOR
@@ -58,8 +72,6 @@ def upload(request):
 			file.ICON.save(directory + '.png', File(open(temp + directory + '/files/icon.png')))
 			file.BACKUP = False
 
-			subprocess.call(['rm', '-r', temp + directory])
-
 		else:
 			return render(request, 'error.html', {'error': 'Form not valid, or file not of acceptable type'})
 	else:
@@ -67,6 +79,7 @@ def upload(request):
 	return render(request, 'upload.html', {'form': form})
 
 def file(request, id):
+	# Serve up the plugin archive file
 	getfiles = UploadedFile.objects.all()
 	for getfile in getfiles:
 		if os.path.basename(getfile.PLUGIN_ID) == id:
@@ -86,6 +99,7 @@ def file(request, id):
 	return render(request, 'error.html', {'error': 'The file does not exist'})
 
 def icon(request, id):
+	# Serve up the plugin icon
 	geticons = UploadedFile.objects.all()
 	for geticon in geticons:
 		if os.path.basename(geticon.PLUGIN_ID) == id:
@@ -105,16 +119,19 @@ def icon(request, id):
 	return render(request, 'error.html', {'error': 'The file does not exist'})
 
 def backup(obj):
+	# Flag an existing object as a backup
 	obj.BACKUP = True
 	obj.save()
 
 def show_list(request):
+	# Refresh and serve up the list of plugins
 	pluginlist = reload_list()
 	response = HttpResponse(mimetype='text/html')
 	response.write(pluginlist)
 	return response
 
 def read_config(location):
+	# Read a plugin's configuration file
 	lookhere = location + '/__init__.py'
 	import imp
 	f = open(lookhere)
