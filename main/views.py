@@ -85,7 +85,7 @@ def upload(request):
 
 def file(request, id):
 	# Serve up the plugin archive file
-	getfiles = UploadedFile.objects.all()
+	getfiles = UploadedFile.objects.filter(BACKUP=False)
 	for getfile in getfiles:
 		if os.path.basename(getfile.PLUGIN_ID) == id:
 			try:
