@@ -20,7 +20,7 @@ def reload_list():
 	return pluginlist
 
 def index(request):
-	return (render(request, 'index.html'))
+	return render(request, 'index.html')
 
 def upload(request):
 	if request.method == 'POST':
