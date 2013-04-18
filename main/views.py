@@ -11,12 +11,13 @@ from django.core.files import File
 from main.models import UploadedFile, SecretKey
 from main.forms import UploadedFileForm
 
-def reload_list():
+def reload_list(distro):
 	pluginlist = []
 	plugins = UploadedFile.objects.filter(BACKUP=False)
 	for data in plugins:
-		entry = {'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': data.MODULES, 'platforms': data.PLATFORMS, 'version': data.VERSION, 'deps': data.DEPS, 'icon': settings.HOSTNAME + '/icon/' + data.PLUGIN_ID, 'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 'name': data.name}
-		pluginlist.append(entry)
+		if distro in data.PLATFORMS or 'any' in data.PLATFORMS:
+			entry = {'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': data.MODULES, 'platforms': data.PLATFORMS, 'version': data.VERSION, 'deps': data.DEPS, 'icon': settings.HOSTNAME + '/icon/' + data.PLUGIN_ID, 'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 'name': data.name}
+			pluginlist.append(entry)
 	return pluginlist
 
 def index(request):
@@ -128,9 +129,9 @@ def backup(obj):
 	obj.BACKUP = True
 	obj.save()
 
-def show_list(request):
+def show_list(request, distro):
 	# Refresh and serve up the list of plugins
-	pluginlist = reload_list()
+	pluginlist = reload_list(distro)
 	response = HttpResponse(mimetype='text/html')
 	response.write(pluginlist)
 	return response
