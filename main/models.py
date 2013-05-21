@@ -21,7 +21,7 @@ class UploadedFile(models.Model):
 	PLATFORMS = models.CharField(max_length=255, default=[])
 	VERSION = models.CharField(max_length=255, default="")
 	DEPS = models.CharField(max_length=255, default=[])
-	ICON = models.ImageField(upload_to=settings.ICON_FOLDER)
+	ICON = models.CharField(max_length=255, default="")
 	HOMEPAGE = models.CharField(max_length=255, default="")
 	BACKUP = models.BooleanField(default=False)
 	PLUGIN_ID = models.CharField(max_length=255, default="")

@@ -16,7 +16,7 @@ def reload_list(distro):
 	plugins = UploadedFile.objects.filter(BACKUP=False)
 	for data in plugins:
 		if distro in data.PLATFORMS or 'any' in data.PLATFORMS:
-			entry = {'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': data.MODULES, 'platforms': data.PLATFORMS, 'version': data.VERSION, 'deps': data.DEPS, 'icon': settings.HOSTNAME + '/icon/' + data.PLUGIN_ID, 'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 'name': data.name}
+			entry = {'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': data.MODULES, 'platforms': data.PLATFORMS, 'version': data.VERSION, 'deps': data.DEPS, 'icon': data.ICON, 'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 'name': data.name}
 			pluginlist.append(entry)
 	return pluginlist
 
@@ -70,8 +70,9 @@ def upload(request):
 			file.DEPS = data.DEPS
 			file.HOMEPAGE = data.HOMEPAGE
 			file.PLUGIN_ID = directory
-			file.ICON.save(directory + '.png', File(open(temp + directory + '/files/icon.png')))
+			file.ICON = data.ICON
 			file.BACKUP = False
+			file.save()
 
 			subprocess.call(['rm', '-r', temp + directory])
 
@@ -97,26 +98,6 @@ def file(request, id):
 					mimetype = 'application/octet-stream'
 				response = HttpResponse(download.read(), mimetype = mimetype)
 				response['Content-Disposition'] = 'attachment; filename="plugin.tar.gz"'
-				return response
-			except IOError:
-				return render(request, 'error.html', {'error': 'Unable to open the file'})
-			except:
-				return render(request, 'error.html', {'error': 'Unexpected error'})
-	return render(request, 'error.html', {'error': 'The file does not exist'})
-
-def icon(request, id):
-	# Serve up the plugin icon
-	geticons = UploadedFile.objects.all()
-	for geticon in geticons:
-		if os.path.basename(geticon.PLUGIN_ID) == id:
-			try:
-				filepath = settings.MEDIA_ROOT + '/' + geticon.ICON.url
-				download = open(filepath, 'r')
-				mimetype = mimetypes.guess_type(filepath)[0]
-				if not mimetype:
-					mimetype = 'application/octet-stream'
-				response = HttpResponse(download.read(), mimetype = mimetype)
-				response['Content-Disposition'] = 'attachment; filename="icon.png"'
 				return response
 			except IOError:
 				return render(request, 'error.html', {'error': 'Unable to open the file'})
