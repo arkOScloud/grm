@@ -8,24 +8,40 @@ from django.shortcuts import render
 from django.conf import settings
 from django.core.files import File
 
-from main.models import UploadedFile, SecretKey
-from main.forms import UploadedFileForm
+from main.models import Plugin, SecretKey
+from main.forms import PluginForm
 
 def reload_list(distro):
 	pluginlist = []
-	plugins = UploadedFile.objects.filter(BACKUP=False)
+	plugins = Plugin.objects.filter(BACKUP=False)
 	for data in plugins:
 		if distro in data.PLATFORMS or 'any' in data.PLATFORMS:
 			entry = {'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': data.MODULES, 'platforms': data.PLATFORMS, 'version': data.VERSION, 'deps': data.DEPS, 'icon': data.ICON, 'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 'name': data.name}
 			pluginlist.append(entry)
 	return pluginlist
 
+def reload_webapps():
+	webapplist = []
+	webapps = WebApp.objects.all()
+	for webapp in webapps:
+		entry = {'id': webapp.webapp_id, 'version': webapp.version, 'location': webapp.location}
+		webapplist.append(entry)
+	return webapplist
+
+def reload_themes():
+	themelist = []
+	themes = Theme.objects.all()
+	for theme in themes:
+		entry = {'description': theme.DESCRIPTION, 'author': theme.AUTHOR, 'version': theme.VERSION, 'homepage': theme.HOMEPAGE, 'id': theme.THEME_ID, 'name': theme.name}
+		themelist.append(entry)
+	return themelist
+
 def index(request):
 	return render(request, 'index.html')
 
 def upload(request):
 	if request.method == 'POST':
-		form = UploadedFileForm(request.POST, request.FILES)
+		form = PluginForm(request.POST, request.FILES)
 		keys = SecretKey.objects.all()
 
 		if not form.is_valid():
@@ -38,10 +54,10 @@ def upload(request):
 			except:
 				return render(request, 'upload.html', {'form': form, 'message': 'Secret key incorrect', type: 'alert-error'})
 
-			newfile = UploadedFile(name=request.FILES['data_file'].name, data_file=request.FILES['data_file'], secret_key=request.POST['secret_key'])
+			newfile = Plugin(name=request.FILES['data_file'].name, data_file=request.FILES['data_file'], secret_key=request.POST['secret_key'])
 			newfile.save()
 
-			file = UploadedFile.objects.get(name=request.FILES['data_file'].name)
+			file = Plugin.objects.get(name=request.FILES['data_file'].name)
 			temp = settings.MEDIA_ROOT + settings.TEMP_FOLDER
 
 			# Untar the archive to a temp location and read its data
@@ -57,8 +73,8 @@ def upload(request):
 				return render(request, 'upload.html', {'form': form, 'message': 'Malformed archive. Please resubmit in accordance with Genesis Plugin API guidelines.', type: 'alert-error'})
 
 			# Create a backup if a matching plugin already exists
-			if UploadedFile.objects.filter(PLUGIN_ID=directory).exists():
-				backup(UploadedFile.objects.get(PLUGIN_ID=directory))
+			if Plugin.objects.filter(PLUGIN_ID=directory).exists():
+				backup(Plugin.objects.get(PLUGIN_ID=directory))
 
 			# Update the database with the new plugin data
 			file.name = data.NAME
@@ -82,12 +98,12 @@ def upload(request):
 		else:
 			return render(request, 'upload.html', {'form': form, 'message': 'Form not valid, or file not of acceptable type', type: 'alert-error'})
 	else:
-		form = UploadedFileForm()
+		form = PluginForm()
 	return render(request, 'upload.html', {'form': form})
 
 def file(request, id):
 	# Serve up the plugin archive file
-	getfiles = UploadedFile.objects.filter(BACKUP=False)
+	getfiles = Plugin.objects.filter(BACKUP=False)
 	for getfile in getfiles:
 		if os.path.basename(getfile.PLUGIN_ID) == id:
 			try:
@@ -105,6 +121,13 @@ def file(request, id):
 				return render(request, 'error.html', {'error': 'Unexpected error'})
 	return render(request, 'error.html', {'error': 'The file does not exist'})
 
+def theme(request, id):
+	# Serve up the theme name and CSS as tuple
+	theme = Plugin.objects.filter(PLUGIN_ID=id)
+	data = theme.name, theme.theme_css 
+	response = HttpResponse(mimetype='text/html')
+	response.write(data)
+
 def backup(obj):
 	# Flag an existing object as a backup
 	obj.BACKUP = True
@@ -115,6 +138,20 @@ def show_list(request, distro):
 	pluginlist = reload_list(distro)
 	response = HttpResponse(mimetype='text/html')
 	response.write(pluginlist)
+	return response
+
+def show_webapps(request):
+	# Refresh and serve up the list of webapps
+	webapplist = reload_webapps()
+	response = HttpResponse(mimetype='text/html')
+	response.write(webapplist)
+	return response
+
+def show_themes(request):
+	# Refresh and serve up the list of themes
+	themelist = reload_themes()
+	response = HttpResponse(mimetype='text/html')
+	response.write(themelist)
 	return response
 
 def read_config(location):
