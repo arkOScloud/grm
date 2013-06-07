@@ -41,9 +41,6 @@ class Theme(models.Model):
 	VERSION = models.CharField(max_length=255, default="")
 	HOMEPAGE = models.CharField(max_length=255, default="")
 
-	def __unicode__(self):
-		return os.path.basename(self.data_file.url)
-
 class WebApp(models.Model):
 	webapp_id			= models.CharField(max_length=255,
 											 default='webapp')

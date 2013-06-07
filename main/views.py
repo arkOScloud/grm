@@ -8,8 +8,8 @@ from django.shortcuts import render
 from django.conf import settings
 from django.core.files import File
 
-from main.models import Plugin, SecretKey
-from main.forms import PluginForm
+from main.models import Plugin, Theme, WebApp, SecretKey
+from main.forms import PluginForm, ThemeForm
 
 def reload_list(distro):
 	pluginlist = []
@@ -101,6 +101,31 @@ def upload(request):
 		form = PluginForm()
 	return render(request, 'upload.html', {'form': form})
 
+def upload_theme(request):
+	if request.method == 'POST':
+		form = ThemeForm(request.POST)
+		keys = SecretKey.objects.all()
+
+		if not form.is_valid():
+			return render(request, 'upload.html', {'form': form, 'message': 'Form not valid', type: 'alert-error'})
+
+		try:
+			SecretKey.objects.get(key=request.POST['secret_key'])
+		except:
+			return render(request, 'upload.html', {'form': form, 'message': 'Secret key incorrect', type: 'alert-error'})
+
+		newfile = Theme(name=request.POST['name'], THEME_ID=request.POST['THEME_ID'], 
+			theme_css=request.POST['theme_css'], DESCRIPTION=request.POST['DESCRIPTION'], 
+			AUTHOR=request.POST['AUTHOR'], VERSION=request.POST['VERSION'], 
+			HOMEPAGE=request.POST['HOMEPAGE'], secret_key=request.POST['secret_key'])
+		newfile.save()
+
+		# Display success message
+		return render(request, 'upload.html', {'form': form, 'message': 'Upload successful!', type: 'alert-success'})
+	else:
+		form = ThemeForm()
+	return render(request, 'upload.html', {'form': form})
+
 def file(request, id):
 	# Serve up the plugin archive file
 	getfiles = Plugin.objects.filter(BACKUP=False)
@@ -123,10 +148,11 @@ def file(request, id):
 
 def theme(request, id):
 	# Serve up the theme name and CSS as tuple
-	theme = Plugin.objects.filter(PLUGIN_ID=id)
+	theme = Theme.objects.get(THEME_ID=id)
 	data = theme.name, theme.theme_css 
 	response = HttpResponse(mimetype='text/html')
 	response.write(data)
+	return response
 
 def backup(obj):
 	# Flag an existing object as a backup
