@@ -2,4 +2,10 @@
 
 {% block title %}Index{% endblock %}
 
-{% block body %}<h2>Genesis Plugin Repository</h2>{% endblock %}
+{% block body %}
+{% load staticfiles %}
+<div class="centermiddle">
+	<img src="{% static 'main/genesis-logo.png' %}" />
+    <a href="//ark-os.org"><h2>Genesis Plugin Repository</h2></a>
+</div>
+{% endblock %}

@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html>
 	<head>
+		{% load staticfiles %}
+		<link rel="stylesheet" type="text/css" href="{% static 'main/bootstrap.min.css' %}" />
+		<link rel="stylesheet" type="text/css" href="{% static 'main/style.css' %}" />
 		<title>Genesis Plugin Repository - {% block title %}Base{% endblock %}</title>
 	</head>
 	<body>

@@ -3,10 +3,25 @@
 {% block title %}Uploader{% endblock %}
 
 {% block body %}
-	<form action="" method="post" enctype="multipart/form-data">
+<div class="centernone">
+	<div class="identifier">
+		{% load staticfiles %}
+		<img class="pull-left" src="{% static 'main/genesis-logo.png' %}" />
+		<h3>Genesis Plugin Repository</h3>
+		<p class="lead">Upload {{ function }}</p>
+	</div>
+	<hr />
+	<form id="upload-form" action="" method="post" enctype="multipart/form-data">
 		{% csrf_token %}
-		{{ form.as_p }}
-		<input type="submit" value="upload" />
-		{{ message }}
+		{% load bootstrap %}
+		{{ form|bootstrap }}
+		<a class="btn btn-large form-button" onclick="document.getElementById('upload-form').submit();">Upload</a>
+		<br />
+		{% if message %}
+			<div class="alert {{ type }}">
+				{{ message }}
+			</div>
+		{% endif %}
 	</form>
+</div>
 {% endblock %}

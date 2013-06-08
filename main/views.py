@@ -45,14 +45,14 @@ def upload(request):
 		keys = SecretKey.objects.all()
 
 		if not form.is_valid():
-			return render(request, 'upload.html', {'form': form})
+			return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Form not valid', 'type': 'alert-error'})
 
 		if request.FILES['data_file'].content_type == 'application/gzip':
 			# Check validity of provided secret key
 			try:
 				SecretKey.objects.get(key=request.POST['secret_key'])
 			except:
-				return render(request, 'upload.html', {'form': form, 'message': 'Secret key incorrect', type: 'alert-error'})
+				return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Secret key incorrect', 'type': 'alert-error'})
 
 			newfile = Plugin(name=request.FILES['data_file'].name, data_file=request.FILES['data_file'], secret_key=request.POST['secret_key'])
 			newfile.save()
@@ -70,7 +70,7 @@ def upload(request):
 			except:
 				newfile.delete()
 				subprocess.call(['rm', '-r', temp + directory])
-				return render(request, 'upload.html', {'form': form, 'message': 'Malformed archive. Please resubmit in accordance with Genesis Plugin API guidelines.', type: 'alert-error'})
+				return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Malformed archive. Please resubmit in accordance with Genesis Plugin API guidelines.', 'type': 'alert-error'})
 
 			# Create a backup if a matching plugin already exists
 			if Plugin.objects.filter(PLUGIN_ID=directory).exists():
@@ -93,13 +93,13 @@ def upload(request):
 			subprocess.call(['rm', '-r', temp + directory])
 
 			# Display success message
-			return render(request, 'upload.html', {'form': form, 'message': 'Upload successful!', type: 'alert-success'})
+			return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Upload successful!', 'type': 'alert-success'})
 
 		else:
-			return render(request, 'upload.html', {'form': form, 'message': 'Form not valid, or file not of acceptable type', type: 'alert-error'})
+			return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'File not of acceptable type', 'type': 'alert-error'})
 	else:
 		form = PluginForm()
-	return render(request, 'upload.html', {'form': form})
+	return render(request, 'upload.html', {'form': form, 'function': 'plugin'})
 
 def upload_theme(request):
 	if request.method == 'POST':
@@ -107,12 +107,12 @@ def upload_theme(request):
 		keys = SecretKey.objects.all()
 
 		if not form.is_valid():
-			return render(request, 'upload.html', {'form': form, 'message': 'Form not valid', type: 'alert-error'})
+			return render(request, 'upload.html', {'form': form, 'function': 'theme', 'message': 'Form not valid', 'type': 'alert-error'})
 
 		try:
 			SecretKey.objects.get(key=request.POST['secret_key'])
 		except:
-			return render(request, 'upload.html', {'form': form, 'message': 'Secret key incorrect', type: 'alert-error'})
+			return render(request, 'upload.html', {'form': form, 'function': 'theme', 'message': 'Secret key incorrect', 'type': 'alert-error'})
 
 		newfile = Theme(name=request.POST['name'], THEME_ID=request.POST['THEME_ID'], 
 			theme_css=request.POST['theme_css'], DESCRIPTION=request.POST['DESCRIPTION'], 
@@ -121,10 +121,10 @@ def upload_theme(request):
 		newfile.save()
 
 		# Display success message
-		return render(request, 'upload.html', {'form': form, 'message': 'Upload successful!', type: 'alert-success'})
+		return render(request, 'upload.html', {'form': form, 'function': 'theme', 'message': 'Upload successful!', 'type': 'alert-success'})
 	else:
 		form = ThemeForm()
-	return render(request, 'upload.html', {'form': form})
+	return render(request, 'upload.html', {'form': form, 'function': 'theme'})
 
 def file(request, id):
 	# Serve up the plugin archive file
