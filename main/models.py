@@ -41,11 +41,6 @@ class Theme(models.Model):
 	VERSION = models.CharField(max_length=255, default="")
 	HOMEPAGE = models.CharField(max_length=255, default="")
 
-class WebApp(models.Model):
-	webapp_id			= models.CharField(max_length=255,
-											 default='webapp')
-	version = models.CharField(max_length=8, default="0")
-	location = models.URLField(default="")
-
 class SecretKey(models.Model):
 	key = models.CharField(max_length=8, default=create_key)
+	admin = models.BooleanField(default=False)

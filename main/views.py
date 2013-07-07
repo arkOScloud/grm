@@ -8,7 +8,7 @@ from django.shortcuts import render
 from django.conf import settings
 from django.core.files import File
 
-from main.models import Plugin, Theme, WebApp, SecretKey
+from main.models import Plugin, Theme, SecretKey
 from main.forms import PluginForm, ThemeForm
 
 def reload_list(distro):
@@ -19,14 +19,6 @@ def reload_list(distro):
 			entry = {'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': data.MODULES, 'platforms': data.PLATFORMS, 'version': data.VERSION, 'deps': data.DEPS, 'icon': data.ICON, 'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 'name': data.name}
 			pluginlist.append(entry)
 	return pluginlist
-
-def reload_webapps():
-	webapplist = []
-	webapps = WebApp.objects.all()
-	for webapp in webapps:
-		entry = {'id': webapp.webapp_id, 'version': webapp.version, 'location': webapp.location}
-		webapplist.append(entry)
-	return webapplist
 
 def reload_themes():
 	themelist = []
@@ -43,6 +35,7 @@ def upload(request):
 	if request.method == 'POST':
 		form = PluginForm(request.POST, request.FILES)
 		keys = SecretKey.objects.all()
+		oldkey = ''
 
 		if not form.is_valid():
 			return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Form not valid', 'type': 'alert-error'})
@@ -53,6 +46,11 @@ def upload(request):
 				SecretKey.objects.get(key=request.POST['secret_key'])
 			except:
 				return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Secret key incorrect', 'type': 'alert-error'})
+
+			if SecretKey.objects.get(key=request.POST['secret_key']).admin == True:
+				superkey = True
+			else:
+				superkey = False
 
 			newfile = Plugin(name=request.FILES['data_file'].name, data_file=request.FILES['data_file'], secret_key=request.POST['secret_key'])
 			newfile.save()
@@ -65,6 +63,7 @@ def upload(request):
 			comm = untar.communicate()[0]
 			comm = comm.split('\n')[0]
 			directory = comm[:-len("/")]
+
 			try:
 				data = read_config(temp + directory)
 			except:
@@ -72,9 +71,16 @@ def upload(request):
 				subprocess.call(['rm', '-r', temp + directory])
 				return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Malformed archive. Please resubmit in accordance with Genesis Plugin API guidelines.', 'type': 'alert-error'})
 
-			# Create a backup if a matching plugin already exists
-			if Plugin.objects.filter(PLUGIN_ID=directory).exists():
-				backup(Plugin.objects.get(PLUGIN_ID=directory))
+			# If upgrading, check permission and backup old one if necessary
+			if Plugin.objects.filter(PLUGIN_ID=directory, BACKUP=False).exists():
+				condition = Plugin.objects.get(PLUGIN_ID=directory, BACKUP=False).secret_key
+				if condition != SecretKey.objects.get(key=request.POST['secret_key']).key and superkey != True:
+					newfile.delete()
+					subprocess.call(['rm', '-r', temp + directory])
+					return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'No permission to upgrade this plugin', 'type': 'alert-error'})
+				else:
+					oldkey = Plugin.objects.get(PLUGIN_ID=directory, BACKUP=False).secret_key
+					backup(Plugin.objects.get(PLUGIN_ID=directory, BACKUP=False))
 
 			# Update the database with the new plugin data
 			file.name = data.NAME
@@ -88,6 +94,8 @@ def upload(request):
 			file.PLUGIN_ID = directory
 			file.ICON = data.ICON
 			file.BACKUP = False
+			if oldkey != '':
+				file.secret_key = oldkey
 			file.save()
 
 			subprocess.call(['rm', '-r', temp + directory])
@@ -164,13 +172,6 @@ def show_list(request, distro):
 	pluginlist = reload_list(distro)
 	response = HttpResponse(mimetype='text/html')
 	response.write(pluginlist)
-	return response
-
-def show_webapps(request):
-	# Refresh and serve up the list of webapps
-	webapplist = reload_webapps()
-	response = HttpResponse(mimetype='text/html')
-	response.write(webapplist)
 	return response
 
 def show_themes(request):
