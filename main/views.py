@@ -1,3 +1,4 @@
+import json
 import os
 import subprocess
 import mimetypes
@@ -16,7 +17,7 @@ def reload_list(distro):
 	plugins = Plugin.objects.filter(BACKUP=False)
 	for data in plugins:
 		if distro in data.PLATFORMS or 'any' in data.PLATFORMS:
-			entry = {'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': data.MODULES, 'platforms': data.PLATFORMS, 'version': data.VERSION, 'deps': data.DEPS, 'icon': data.ICON, 'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 'name': data.name}
+			entry = {'ptype': data.TYPE, 'description': data.DESCRIPTION, 'author': data.AUTHOR, 'modules': eval(data.MODULES), 'platforms': eval(data.PLATFORMS), 'version': data.VERSION, 'deps': eval(data.DEPS), 'icon': data.ICON, 'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 'name': data.name, 'categories': eval(data.CATEGORIES)}
 			pluginlist.append(entry)
 	return pluginlist
 
@@ -84,12 +85,18 @@ def upload(request):
 
 			# Update the database with the new plugin data
 			file.name = data.NAME
+			file.TYPE = data.TYPE
 			file.DESCRIPTION = data.DESCRIPTION
+			file.LONG_DESCRIPTION = data.LONG_DESCRIPTION if hasattr(data, 'LONG_DESCRIPTION') else ''
 			file.AUTHOR = data.AUTHOR
+			file.APP_AUTHOR = data.APP_AUTHOR if hasattr(data, 'APP_AUTHOR') else ''
+			file.APP_HOMEPAGE = data.APP_HOMEPAGE if hasattr(data, 'APP_HOMEPAGE') else ''
 			file.MODULES = data.MODULES
 			file.PLATFORMS = data.PLATFORMS
+			file.CATEGORIES = data.CATEGORIES
+			file.TYPE = data.TYPE
 			file.VERSION = data.VERSION
-			file.DEPS = data.DEPS
+			file.DEPS = data.DEPENDENCIES
 			file.HOMEPAGE = data.HOMEPAGE
 			file.PLUGIN_ID = directory
 			file.ICON = data.ICON
@@ -170,9 +177,7 @@ def backup(obj):
 def show_list(request, distro):
 	# Refresh and serve up the list of plugins
 	pluginlist = reload_list(distro)
-	response = HttpResponse(mimetype='text/html')
-	response.write(pluginlist)
-	return response
+	return HttpResponse(json.dumps(pluginlist), content_type='application/json')
 
 def show_themes(request):
 	# Refresh and serve up the list of themes

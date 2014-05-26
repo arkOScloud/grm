@@ -6,7 +6,7 @@ from main.models import Plugin, Theme, SecretKey
 class PluginForm(forms.ModelForm):
 	class Meta:
 		model = Plugin
-		exclude = ('name', 'DESCRIPTION', 'AUTHOR', 'MODULES', 'PLATFORMS', 'VERSION', 'DEPS', 'ICON', 'HOMEPAGE', 'PLUGIN_ID', 'BACKUP')
+		exclude = ('name', 'CATEGORIES', 'DESCRIPTION', 'LONG_DESCRIPTION', 'AUTHOR', 'APP_AUTHOR', 'MODULES', 'PLATFORMS', 'VERSION', 'DEPS', 'ICON', 'HOMEPAGE', 'APP_HOMEPAGE', 'PLUGIN_ID', 'BACKUP', 'TYPE')
 
 class ThemeForm(forms.ModelForm):
 	class Meta:
