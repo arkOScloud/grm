@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		{% load staticfiles %}
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" type="text/css" href="{% static 'bootstrap/css/bootstrap.min.css' %}" media="screen" />
+		<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}" media="screen" />
+		<title>Genesis Repo - {% block title %}Registration Base{% endblock %}</title>
+	</head>
+	<body>
+		<div class="container">
+			{% block body %}{% endblock %}
+		</div><!-- /.container -->
+
+		<!-- JavaScript plugins (requires jQuery) -->
+		<script src="http://code.jquery.com/jquery.js"></script>
+		<!-- Include all compiled plugins (below), or include individual files as needed -->
+		<script src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
+	</body>
+</html>

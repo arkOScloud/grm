@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+
+{% block title %}Uploader{% endblock %}
+
+{% block body %}
+{% load widget_tweaks %}
+{% load staticfiles %}
+<div class="main">
+	<div class="form-signin">
+		<form id="upload-form" method="post" action="." enctype="multipart/form-data">
+			{% csrf_token %}
+			<fieldset>
+				<legend>Upload Plugin</legend>
+				<div class="form-group">
+					<label for="data_file">Upload</label>
+					{% render_field form.data_file %}
+				</div>
+
+				{% if message %}
+					<div class="alert {{ type }}">
+						{{ message }}
+					</div>
+				{% endif %}
+
+				<div class="form-group">
+					<button type="submit" class="btn btn-default">Upload</button>
+				</div>
+			</fieldset>
+		</form>
+	</div>
+</div>
+{% endblock %}
