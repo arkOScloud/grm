@@ -1,3 +1,4 @@
 settings.py
 *.pyc
-upload/db.sqlite3
+genesis_repo/db.sqlite3
+upload

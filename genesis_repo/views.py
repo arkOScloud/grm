@@ -57,10 +57,10 @@ def index(request):
 		elif data.has_key('get') and data['get'] == 'assets':
 			return assets(request, data['id'])
 		elif data.has_key('put') and data['put'] == 'crashreport':
-			return crashreport(request, data['report'])
+			return crashreport(request, data['report'], data['comments'])
 		else:
 			cache.incr('reqno')
-			return HttpResponse(json.dumps({'status': 400}), content_type='application/json')
+			return HttpResponse(json.dumps({'status': 400, 'info': 'Malformed request'}), content_type='application/json')
 	return render(request, 'index.html', {'reqno': cache.get('reqno')})
 
 @login_required
@@ -105,6 +105,7 @@ def upload(request):
 				DEPS=json.dumps(data['dependencies']),
 				PLUGIN_ID=pid,
 				ICON=data['icon'],
+				LOGO=base64.b64encode(t.extractfile(os.path.join(pid, 'files/logo.png')).read()) if data.has_key('logo') and data['logo'] else '',
 				BACKUP=False
 				)
 			f.save()
@@ -113,9 +114,6 @@ def upload(request):
 					b = base64.b64encode(t.extractfile(os.path.join(pid, 'files', x)).read())
 					s = Screenshot(plugin=f, image=b)
 					s.save()
-			if data.has_key('logo') and data['logo']:
-				f.LOGO = base64.b64encode(t.extractfile(os.path.join(pid, 'files/logo.png')).read())
-			f.save()
 
 			# Display success message
 			return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Upload successful!', 'type': 'alert-success'})
@@ -160,7 +158,7 @@ def getplugin(request, id):
 			except IOError:
 				a = {'status': 500, 'info': 'Unable to open the file'}
 			except:
-				a = {'status': 500, 'error': 'Unexpected error'}
+				a = {'status': 500, 'info': 'Unexpected error'}
 	except Plugin.DoesNotExist:
 		a = {'status': 404, 'info': 'No plugin found with that id.'}
 	cache.incr('reqno')
@@ -173,6 +171,15 @@ def assets(request, id):
 	except Plugin.DoesNotExist:
 		a = {'status': 404, 'info': 'No plugin found with that id.'}
 	cache.incr('reqno')
+	return HttpResponse(json.dumps(a), content_type='application/json')
+
+def crashreport(request, cr, co):
+	try:
+		c = CrashReport(report=cr, comments=co)
+		c.save()
+		a = {'status': 200, 'info': 'Your crash report was submitted successfully.'}
+	except:
+		a = {'status': 500, 'info': 'An unspecified server error occurred and your crash report couldn\'t be submitted. Please submit manually to the developers!'}
 	return HttpResponse(json.dumps(a), content_type='application/json')
 
 def theme(request, id):
