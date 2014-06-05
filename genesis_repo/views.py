@@ -18,9 +18,6 @@ from django.core.files import File
 from models import Plugin, Theme, Screenshot, CrashReport
 from forms import PluginForm, ThemeForm
 
-if not cache.get('reqno'):
-	cache.set('reqno', 0)
-
 def reload_list(distro):
 	pluginlist = []
 	plugins = Plugin.objects.filter(BACKUP=False)
@@ -31,7 +28,9 @@ def reload_list(distro):
 			'author': data.AUTHOR, 'modules': json.loads(data.MODULES), 
 			'platforms': platforms, 'version': data.VERSION, 
 			'deps': json.loads(data.DEPS), 'icon': data.ICON, 
-			'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID, 
+			'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID,
+			'app_author': data.APP_AUTHOR, 'app_homepage': data.APP_HOMEPAGE,
+			'assets': data.LOGO != '', 'long_description': data.LONG_DESCRIPTION,
 			'name': data.name, 'categories': json.loads(data.CATEGORIES)}
 			pluginlist.append(entry)
 	return pluginlist
@@ -48,7 +47,7 @@ def reload_themes():
 
 @csrf_exempt
 def index(request):
-	if request.method == 'POST' and request.META.get('CONTENT_TYPE') == 'application/json':
+	if request.method == 'POST' and 'application/json' in request.META.get('CONTENT_TYPE'):
 		data = json.loads(request.body)
 		if data.has_key('get') and data['get'] == 'list':
 			return show_list(request, data['distro'])
@@ -59,9 +58,9 @@ def index(request):
 		elif data.has_key('put') and data['put'] == 'crashreport':
 			return crashreport(request, data['report'], data['comments'])
 		else:
-			cache.incr('reqno')
+			get_reqno()
 			return HttpResponse(json.dumps({'status': 400, 'info': 'Malformed request'}), content_type='application/json')
-	return render(request, 'index.html', {'reqno': cache.get('reqno')})
+	return render(request, 'index.html', {'reqno': get_reqno(False)})
 
 @login_required
 def upload(request):
@@ -70,7 +69,7 @@ def upload(request):
 		if not request.FILES['data_file'].content_type == 'application/gzip':
 			return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'File not of acceptable type', 'type': 'alert-danger'})
 		else:
-			cache.incr('reqno')
+			get_reqno()
 			arch = request.FILES['data_file']
 			arch = cStringIO.StringIO(arch.read())
 			t = tarfile.open(fileobj=arch)
@@ -128,7 +127,7 @@ def upload_theme(request):
 		if not form.is_valid():
 			return render(request, 'upload.html', {'form': form, 'function': 'theme', 'message': 'Form not valid', 'type': 'alert-danger'})
 
-		cache.incr('reqno')
+		get_reqno()
 		newfile = Theme(name=request.POST['name'], THEME_ID=request.POST['THEME_ID'], 
 			theme_css=request.POST['theme_css'], DESCRIPTION=request.POST['DESCRIPTION'], 
 			AUTHOR=request.POST['AUTHOR'], VERSION=request.POST['VERSION'], 
@@ -161,7 +160,7 @@ def getplugin(request, id):
 				a = {'status': 500, 'info': 'Unexpected error'}
 	except Plugin.DoesNotExist:
 		a = {'status': 404, 'info': 'No plugin found with that id.'}
-	cache.incr('reqno')
+	get_reqno()
 	return HttpResponse(json.dumps(a), content_type='application/json')
 
 def assets(request, id):
@@ -170,13 +169,14 @@ def assets(request, id):
 		a = {'status': 200, 'info': p.PLUGIN_ID, 'logo': p.LOGO if hasattr(p, 'LOGO') else None, 'screenshots': [x.image for x in p.screens.all()]}
 	except Plugin.DoesNotExist:
 		a = {'status': 404, 'info': 'No plugin found with that id.'}
-	cache.incr('reqno')
+	get_reqno()
 	return HttpResponse(json.dumps(a), content_type='application/json')
 
 def crashreport(request, cr, co):
 	try:
 		c = CrashReport(report=cr, comments=co)
 		c.save()
+		get_reqno()
 		a = {'status': 200, 'info': 'Your crash report was submitted successfully.'}
 	except:
 		a = {'status': 500, 'info': 'An unspecified server error occurred and your crash report couldn\'t be submitted. Please submit manually to the developers!'}
@@ -188,7 +188,7 @@ def theme(request, id):
 	data = theme.name, theme.theme_css 
 	response = HttpResponse(mimetype='text/html')
 	response.write(data)
-	cache.incr('reqno')
+	get_reqno()
 	return response
 
 def backup(obj):
@@ -198,7 +198,7 @@ def backup(obj):
 
 def show_list(request, distro):
 	# Refresh and serve up the list of plugins
-	cache.incr('reqno')
+	get_reqno()
 	pluginlist = reload_list(distro)
 	return HttpResponse(json.dumps(pluginlist), content_type='application/json')
 
@@ -207,5 +207,12 @@ def show_themes(request):
 	themelist = reload_themes()
 	response = HttpResponse(mimetype='text/html')
 	response.write(themelist)
-	cache.incr('reqno')
+	get_reqno()
 	return response
+
+def get_reqno(incr=True):
+	if not cache.get('reqno'):
+		cache.set('reqno', 0, None)
+	if incr:
+		cache.set('reqno', cache.get('reqno') + 1, None)
+	return cache.get('reqno')
