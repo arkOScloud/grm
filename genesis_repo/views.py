@@ -2,7 +2,6 @@ import base64
 import cStringIO
 import json
 import os
-import mimetypes
 import tarfile
 import subprocess
 import sys
@@ -147,13 +146,10 @@ def getplugin(request, id):
 		if os.path.basename(p.PLUGIN_ID) == id:
 			try:
 				filepath = os.path.join(settings.MEDIA_ROOT, p.data_file.url)
-				download = open(filepath, 'r')
-				mimetype = mimetypes.guess_type(filepath)[0]
-				if not mimetype:
-					mimetype = 'application/octet-stream'
-				response = HttpResponse(download.read(), content_type=mimetype)
-				response['Content-Disposition'] = 'attachment; filename="plugin.tar.gz"'
-				return response
+				f = open(filepath, 'r')
+				data = base64.b64encode(f.read())
+				f.close()
+				a = {'status': 200, 'info': data}
 			except IOError:
 				a = {'status': 500, 'info': 'Unable to open the file'}
 			except:
