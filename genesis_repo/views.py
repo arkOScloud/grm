@@ -65,7 +65,7 @@ def index(request):
 def upload(request):
 	if request.method == 'POST':
 		form = PluginForm(request.POST, request.FILES)
-		if not request.FILES['data_file'].content_type == 'application/gzip':
+		if not request.FILES['data_file'].content_type in ['application/gzip', 'application/x-gzip']:
 			return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'File not of acceptable type', 'type': 'alert-danger'})
 		else:
 			get_reqno()
