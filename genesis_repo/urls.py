@@ -5,8 +5,11 @@ admin.autodiscover()
 
 urlpatterns = patterns('genesis_repo.views',
 	url(r'^$', 'index', name='index'),
+	url(r'^upload', 'upload', name='upload'),
+	url(r'^api/v1/apps$', 'apps', name='apps'),
 	url(r'^api/v1/apps/(?P<id>(.+))$', 'apps', name='apps'),
-	url(r'^api/v1/error/', 'error', name='error'),
+	url(r'^api/v1/error$', 'error', name='error'),
+	url(r'^api/v1/updates$', 'updates', name='updates'),
 	url(r'^api/v1/updates/(?P<id>(.+))$', 'updates', name='updates'),
 	url(r'^api/v1/assets/(?P<id>(.+))$', 'assets', name='assets'),
 	url(r'^api/v1/signatures/(?P<id>(.+))$', 'signatures', name='signatures'),

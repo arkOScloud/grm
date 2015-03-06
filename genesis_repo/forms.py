@@ -13,7 +13,7 @@ class ThemeForm(forms.ModelForm):
 
 class AdminPluginForm(admin.ModelAdmin):
 	model = Plugin
-	list_display = ('name', 'VERSION', 'data_file', 'BACKUP')
+	list_display = ('name', 'VERSION', 'archive', 'BACKUP')
 
 class AdminThemeForm(admin.ModelAdmin):
 	model = Theme
