@@ -75,7 +75,7 @@ def upload(request):
 
 			data = None
 			for x in t.getmembers():
-				if 'plugin.json' in x.name:
+				if '/plugin.json' in x.name:
 					pid = x.name.split('/')[0]
 					data = json.loads(t.extractfile(x).read())
 			if not data:
