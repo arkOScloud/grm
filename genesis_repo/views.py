@@ -9,10 +9,10 @@ import sys
 from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
 from django.shortcuts import render
 from django.conf import settings
 from django.core.files import File
+from django.http import HttpResponse, HttpResponseNotFound, HttpResponseBadRequest, HttpResponseServerError
 
 from models import Plugin, Theme, Screenshot, CrashReport
 from forms import PluginForm, ThemeForm
@@ -102,24 +102,22 @@ def apps(request, id=""):
     				f = open(filepath, 'r')
     				data = base64.b64encode(f.read())
     				f.close()
-    				a = {'status': 200, 'info': data}
+    				return HttpResponse(json.dumps({'application': data}), content_type='application/json')
     			except IOError:
-    				a = {'status': 500, 'info': 'Unable to open the file'}
+    				return HttpResponseServerError(json.dumps({'message': 'Unable to open the file'}), content_type='application/json')
     			except:
-    				a = {'status': 500, 'info': 'Unexpected error'}
+    				return HttpResponseServerError(json.dumps({'message': 'Unexpected error'}), content_type='application/json')
     	except Plugin.DoesNotExist:
-    		a = {'status': 404, 'info': 'No plugin found with that id.'}
-    	return HttpResponse(json.dumps(a), content_type='application/json')
+    		return HttpResponseNotFound(json.dumps({'message': 'No plugin found with that id.'}), content_type='application/json')
     else:
         return redirect("genesis_repo.views.show_list")
 
 def assets(request, id):
 	try:
 		p = Plugin.objects.get(PLUGIN_ID=id, BACKUP=False)
-		a = {'status': 200, 'info': p.PLUGIN_ID, 'logo': p.LOGO if hasattr(p, 'LOGO') else None, 'screenshots': [x.image for x in p.screens.all()]}
+		return HttpResponse(json.dumps({'id': p.PLUGIN_ID, 'logo': p.LOGO if hasattr(p, 'LOGO') else None, 'screenshots': [x.image for x in p.screens.all()]}), content_type='application/json')
 	except Plugin.DoesNotExist:
-		a = {'status': 404, 'info': 'No plugin found with that id.'}
-	return HttpResponse(json.dumps(a), content_type='application/json')
+	    return HttpResponseNotFound(json.dumps({'message': 'No plugin found with that id.'}), content_type='application/json')
 
 @csrf_exempt
 def error(request):
@@ -127,16 +125,14 @@ def error(request):
         data = json.loads(request.body)
     	try:
     	    if CrashReport.objects.filter(summary=data["summary"]):
-        		a = {'status': 200, 'info': 'Your crash report was submitted successfully.'}
-                return HttpResponse(json.dumps(a), content_type='application/json')
+        		return HttpResponse(json.dumps({'message': 'Your crash report was submitted successfully.'}), content_type='application/json')
     		c = CrashReport(trace=data["trace"], version=data["version"], 
     		    arch=data["arch"])
     		c.save()
-    		a = {'status': 200, 'info': 'Your crash report was submitted successfully.'}
+    		return HttpResponse(json.dumps({'message': 'Your crash report was submitted successfully.'}), content_type='application/json')
     	except:
-    		a = {'status': 500, 'info': 'An unspecified server error occurred and your crash report couldn\'t be submitted. Please submit manually to the developers!'}
-	a = {'status': 400, 'info': 'Can only POST to this resource'}
-	return HttpResponse(json.dumps(a), content_type='application/json')
+    	    return HttpResponseServerError(json.dumps({'message': 'An unspecified server error occurred and your crash report couldn\'t be submitted. Please submit manually to the developers!'}), content_type='application/json')
+	return HttpResponseBadRequest(json.dumps({'message': 'Can only POST to this resource'}), content_type='application/json')
 
 def backup(obj):
 	# Flag an existing object as a backup
@@ -146,4 +142,4 @@ def backup(obj):
 def show_list(request, distro):
 	# Refresh and serve up the list of plugins
 	pluginlist = reload_list()
-	return HttpResponse(json.dumps(pluginlist), content_type='application/json')
+	return HttpResponse(json.dumps({"applications": pluginlist}), content_type='application/json')
