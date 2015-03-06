@@ -4,12 +4,12 @@ from django.contrib import admin
 admin.autodiscover()
 
 urlpatterns = patterns('genesis_repo.views',
-		url(r'^$', 'index', name='index'),
-		url(r'^apps/(?P<id>(.+))$', 'apps', name='apps'),
-		url(r'^error/', 'error', name='error'),
-		url(r'^updates/(?P<id>(.+))$', 'updates', name='updates'),
-		url(r'^assets/(?P<id>(.+))$', 'assets', name='assets'),
-		url(r'^signatures/(?P<id>(.+))$', 'signatures', name='signatures'),
-		url(r'^accounts/', include('registration.backends.default.urls')),
-		url(r'^admin/', include(admin.site.urls))
+	url(r'^$', 'index', name='index'),
+	url(r'^api/v1/apps/(?P<id>(.+))$', 'apps', name='apps'),
+	url(r'^api/v1/error/', 'error', name='error'),
+	url(r'^api/v1/updates/(?P<id>(.+))$', 'updates', name='updates'),
+	url(r'^api/v1/assets/(?P<id>(.+))$', 'assets', name='assets'),
+	url(r'^api/v1/signatures/(?P<id>(.+))$', 'signatures', name='signatures'),
+	url(r'^accounts/', include('registration.backends.default.urls')),
+	url(r'^admin/', include(admin.site.urls))
 )
