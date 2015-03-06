@@ -3,7 +3,7 @@ from django.conf.urls import patterns, include, url
 from django.contrib import admin
 admin.autodiscover()
 
-urlpatterns = patterns('genesis_repo.views',
+urlpatterns = patterns('grm.views',
 	url(r'^$', 'index', name='index'),
 	url(r'^upload', 'upload', name='upload'),
 	url(r'^api/v1/apps$', 'apps', name='apps'),
