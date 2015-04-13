@@ -47,5 +47,16 @@ class CrashReport(models.Model):
     created_at = models.DateTimeField(auto_now=True)
     trace = models.TextField(max_length=99999, default="")
     summary = models.TextField(max_length=99999, default="")
+    report = models.TextField(max_length=99999, default="")
     version = models.TextField(max_length=255, default="")
     arch = models.TextField(max_length=255, default="")
+
+class Update(models.Model):
+    created_at = models.DateTimeField(auto_now=True)
+    info = models.TextField(max_length=99999, default="")
+    name = models.TextField(max_length=255, default="")
+    tasks = models.TextField(max_length=99999, default="")
+
+class UpdateSignature(models.Model):
+    update = models.OneToOneField(Update, related_name='signature')
+    sig = models.TextField(max_length=99999, default="")

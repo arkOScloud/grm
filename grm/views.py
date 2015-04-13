@@ -16,7 +16,7 @@ from django.core.files import File
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseNotFound, HttpResponseBadRequest, HttpResponseServerError
 
-from models import Plugin, Theme, Image, CrashReport
+from models import Plugin, Theme, Image, CrashReport, Update
 from forms import PluginForm, ThemeForm
 
 
@@ -32,14 +32,13 @@ def reload_list():
             screens = [x.id for x in data.images.filter(itype="screenshot")]
         except ObjectDoesNotExist:
             screens = []
-        entry = {'atype': data.TYPE, 'description': data.DESCRIPTION, 
-        'author': data.AUTHOR, 'modules': json.loads(data.MODULES), 
-        'version': data.VERSION, 'deps': json.loads(data.DEPS), 'icon': data.ICON, 
-        'homepage': data.HOMEPAGE, 'id': data.PLUGIN_ID,
-        'app_author': data.APP_AUTHOR, 'app_homepage': data.APP_HOMEPAGE,
-        'assets': {'logo': logo, 'screens': screens},
-        'long_description': data.LONG_DESCRIPTION,
-        'name': data.name, 'categories': json.loads(data.CATEGORIES)}
+        entry = {'id': data.PLUGIN_ID, 'name': data.name, 'type': data.TYPE, 'icon': data.ICON, 
+        'description': {'short': data.DESCRIPTION, 'long': data.LONG_DESCRIPTION},
+        'categories': json.loads(data.CATEGORIES), 'version': data.VERSION, 
+        'author': data.AUTHOR, 'homepage': data.HOMEPAGE, 
+        'app_author': data.APP_AUTHOR, 'app_homepage': data.APP_HOMEPAGE, 
+        'assets': {'logo': logo, 'screens': screens}, 'modules': json.loads(data.MODULES), 
+        'dependencies': json.loads(data.DEPS)}
         pluginlist.append(entry)
     return pluginlist
 
@@ -127,17 +126,28 @@ def assets(request, id):
     try:
         p = Image.objects.get(pk=id)
         with open(p.image.path, 'r') as f:
-            resp = HttpResponse(f.read(), content_type='application/jpeg' if p.itype == 'screenshot' else 'application/png')
-            resp['Content-Disposition'] = 'filename="%s.%s"' % (p.id, ('jpg' if p.itype == 'screenshot' else 'png'))
-            return resp
+            return HttpResponse(f.read(), content_type='image/jpeg' if p.itype == 'screenshot' else 'image/png')
     except Plugin.DoesNotExist:
         return HttpResponseNotFound(json.dumps({'message': 'No assets found with that id.'}), content_type='application/json')
 
 def signatures(request, id):
-    pass
+    id = int(id)
+    try:
+        s = Update.objects.get(pk=id)
+        return HttpResponse(s.signature.sig)
+    except Update.DoesNotExist:
+        return HttpResponseNotFound(json.dumps({'message': 'No signature found with that id'}))
 
 def updates(request, id):
-    pass
+    if not id:
+        id = 0
+    id = int(id)
+    ujson = []
+    upds = Update.objects.filter(pk__gt=id)
+    for upd in upds:
+        ujson.append({"id": upd.pk, "name": upd.name, "info": upd.info, 
+            "date": upd.created_at.isoformat(), "tasks": upd.tasks})
+    return HttpResponse(json.dumps({"updates": ujson}))
 
 @csrf_exempt
 def error(request):
@@ -147,7 +157,7 @@ def error(request):
             if CrashReport.objects.filter(summary=data["summary"]):
                 return HttpResponse(json.dumps({'message': 'Your crash report has already been submitted. Developers will take care of it as soon as possible.'}), content_type='application/json')
             c = CrashReport(summary=data["summary"], trace=data["trace"], 
-                version=data["version"], arch=data["arch"])
+                version=data["version"], arch=data["arch"], report=data["report"])
             c.save()
             return HttpResponse(json.dumps({'message': 'Your crash report was submitted successfully.'}), content_type='application/json')
         except:
