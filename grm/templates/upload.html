@@ -7,13 +7,13 @@
 {% load staticfiles %}
 <div class="main">
 	<div class="form-signin">
-		<form id="upload-form" method="post" action="." enctype="multipart/form-data">
+		<form id="upload-form" method="post" action="/upload" enctype="multipart/form-data">
 			{% csrf_token %}
 			<fieldset>
 				<legend>Upload Plugin</legend>
 				<div class="form-group">
-					<label for="data_file">Upload</label>
-					{% render_field form.data_file %}
+					<label for="archive">Upload</label>
+					{% render_field form.archive %}
 				</div>
 
 				{% if message %}

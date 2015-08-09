@@ -1,10 +1,5 @@
-# Genesis Repository Manager
+# arkOS General Registry Manager (GRM)
 
-A server for managing the Genesis plugin repository. Clients can download the repo list from the server with the latest versions of all plugins, then request and download the plugin as needed.
+A server for managing the arkOS general application registry. Clients can download the repo list from the server with the latest versions of all applications, then request and download the app as needed. This server also collects error reports, distributes app store assets, update information and update signature verifications.
 
-To run, your `settings.py` must have the following settings:
-
-* `HOSTNAME`: the base address of your Django server
-* `MEDIA_ROOT`
-* `PLUGIN_ROOT` to store plugins
-* `TEMP_FOLDER` to store extracted files as they are read
+For more information, please contact arkOS developers.
