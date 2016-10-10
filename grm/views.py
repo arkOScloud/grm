@@ -50,7 +50,7 @@ def index(request):
 
 @csrf_exempt
 def echo(request):
-    ip = request.META.get('REMOTE_ADDR')
+    ip = request.META.get('HTTP_X_REAL_IP')
     id = request.POST.get('id')
     uri = request.POST.get('uri')
     port = request.POST.get('port')
