@@ -1,23 +1,20 @@
 import cStringIO
-import hashlib
 import json
 import os
-import random
 import tarfile
-import subprocess
-import sys
+import requests
 
-from django.core.cache import cache
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, redirect
-from django.conf import settings
-from django.core.files import File
+from django.shortcuts import render
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponse, HttpResponseNotFound, HttpResponseBadRequest, HttpResponseServerError
+from django.http import (
+    JsonResponse, HttpResponse, HttpResponseRedirect,
+    HttpResponsePermanentRedirect
+)
 
-from models import Plugin, Theme, Image, CrashReport, Update
-from forms import PluginForm, ThemeForm
+from models import Plugin, Image, CrashReport, Update
+from forms import PluginForm
 
 
 def reload_list():
@@ -32,26 +29,58 @@ def reload_list():
             screens = [x.id for x in data.images.filter(itype="screenshot")]
         except ObjectDoesNotExist:
             screens = []
-        entry = {'id': data.PLUGIN_ID, 'name': data.name, 'type': data.TYPE, 'icon': data.ICON, 
-        'description': {'short': data.DESCRIPTION, 'long': data.LONG_DESCRIPTION},
-        'categories': json.loads(data.CATEGORIES), 'version': data.VERSION, 
-        'author': data.AUTHOR, 'homepage': data.HOMEPAGE, 
-        'app_author': data.APP_AUTHOR, 'app_homepage': data.APP_HOMEPAGE, 
-        'assets': {'logo': logo, 'screens': screens}, 'modules': json.loads(data.MODULES), 
-        'dependencies': json.loads(data.DEPS)}
-        pluginlist.append(entry)
+        pluginlist.append({
+            'id': data.PLUGIN_ID, 'name': data.name, 'type': data.TYPE,
+            'icon': data.ICON, 'description': {
+                'short': data.DESCRIPTION, 'long': data.LONG_DESCRIPTION
+            }, 'categories': json.loads(data.CATEGORIES),
+            'version': data.VERSION, 'author': data.AUTHOR,
+            'homepage': data.HOMEPAGE, 'app_author': data.APP_AUTHOR,
+            'app_homepage': data.APP_HOMEPAGE, 'assets': {
+                'logo': logo, 'screens': screens
+            }, 'modules': json.loads(data.MODULES),
+            'dependencies': json.loads(data.DEPS)
+        })
     return pluginlist
+
 
 def index(request):
     return render(request, 'index.html')
+
+
+@csrf_exempt
+def echo(request):
+    ip = request.META.get('REMOTE_ADDR')
+    id = request.POST.get('id')
+    uri = request.POST.get('uri')
+    port = request.POST.get('port')
+
+    if not id and not port:
+        return JsonResponse({"ip": ip})
+    if not uri:
+        uri = ip
+
+    try:
+        requests.post('http://' + uri + ':' + port + '/' + id, timeout=5.0)
+        outbound_ok = True
+    except:
+        outbound_ok = False
+    return JsonResponse({"ip": ip, "outbound_ok": outbound_ok})
+
 
 @csrf_exempt
 @login_required
 def upload(request):
     if request.method == 'POST':
         form = PluginForm(request.POST, request.FILES)
-        if not request.FILES['archive'].content_type in ['application/gzip', 'application/x-gzip']:
-            return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'File not of acceptable type', 'type': 'alert-danger'})
+        if not request.FILES['archive'].content_type in \
+                ['application/gzip', 'application/x-gzip']:
+            return render(
+                request, 'upload.html', {
+                    'form': form, 'function': 'plugin',
+                    'message': 'File not of acceptable type',
+                    'type': 'alert-danger'
+                })
         else:
             arch = request.FILES['archive']
             arch = cStringIO.StringIO(arch.read())
@@ -63,7 +92,13 @@ def upload(request):
                     pid = x.name.split('/')[0]
                     data = json.loads(t.extractfile(x).read())
             if not data:
-                return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Malformed archive. Please resubmit in accordance with Genesis Plugin API guidelines.', 'type': 'alert-error'})
+                return render(
+                    request, 'upload.html', {
+                        'form': form, 'function': 'plugin',
+                        'message': 'Malformed archive. Please resubmit in '
+                        'accordance with Genesis Plugin API guidelines.',
+                        'type': 'alert-error'
+                    })
 
             # If upgrading, check permission and backup old one if necessary
             if Plugin.objects.filter(PLUGIN_ID=pid, BACKUP=False).exists():
@@ -91,18 +126,27 @@ def upload(request):
             f.save()
             if data.get('logo'):
                 s = Image(itype="logo", plugin=f)
-                s.image.save("logo.png", t.extractfile(os.path.join(pid, 'assets/logo.png')))
+                s.image.save(
+                    "logo.png",
+                    t.extractfile(os.path.join(pid, 'assets/logo.png')))
                 s.save()
             if data.get('screenshots'):
                 for x in data['screenshots']:
                     s = Image(itype="screenshot", plugin=f)
-                    s.image.save("screen.jpg", t.extractfile(os.path.join(pid, 'assets', x)))
+                    s.image.save(
+                        "screen.jpg",
+                        t.extractfile(os.path.join(pid, 'assets', x)))
                     s.save()
             # Display success message
-            return render(request, 'upload.html', {'form': form, 'function': 'plugin', 'message': 'Upload successful!', 'type': 'alert-success'})
+            return render(
+                request, 'upload.html', {
+                    'form': form, 'function': 'plugin',
+                    'message': 'Upload successful!', 'type': 'alert-success'
+                })
     else:
         form = PluginForm()
     return render(request, 'upload.html', {'form': form, 'function': 'plugin'})
+
 
 def apps(request, id=""):
     if id:
@@ -110,25 +154,30 @@ def apps(request, id=""):
             p = Plugin.objects.get(PLUGIN_ID=id, BACKUP=False)
             if os.path.basename(p.PLUGIN_ID) == id:
                 try:
-                    with open(p.archive.path, 'r') as f:
-                        data = f.read()
-                    return HttpResponse(data, content_type='application/gzip')
+                    basename = os.path.basename(p.archive.path)
+                    return HttpResponseRedirect("/media/{0}".format(basename))
                 except IOError:
-                    return HttpResponseServerError(json.dumps({'message': 'Unable to open the file'}), content_type='application/json')
+                    return JsonResponse(
+                        {'message': 'Unable to open the file'}, status=500)
                 except:
-                    return HttpResponseServerError(json.dumps({'message': 'Unexpected error'}), content_type='application/json')
+                    return JsonResponse(
+                        {'message': 'Unexpected error'}, status=500)
         except Plugin.DoesNotExist:
-            return HttpResponseNotFound(json.dumps({'message': 'No plugin found with that id.'}), content_type='application/json')
+            return JsonResponse(
+                {'message': 'No plugin found with that id.'}, status=404)
     else:
         return show_list(request)
+
 
 def assets(request, id):
     try:
         p = Image.objects.get(pk=id)
-        with open(p.image.path, 'r') as f:
-            return HttpResponse(f.read(), content_type='image/jpeg' if p.itype == 'screenshot' else 'image/png')
-    except Plugin.DoesNotExist:
-        return HttpResponseNotFound(json.dumps({'message': 'No assets found with that id.'}), content_type='application/json')
+        basename = os.path.basename(p.image.path)
+        return HttpResponsePermanentRedirect("/media/{0}".format(basename))
+    except Image.DoesNotExist:
+        return JsonResponse(
+            {'message': 'No assets found with that id.'}, status=404)
+
 
 def signatures(request, id):
     id = int(id)
@@ -136,7 +185,9 @@ def signatures(request, id):
         s = Update.objects.get(pk=id)
         return HttpResponse(s.signature.sig)
     except Update.DoesNotExist:
-        return HttpResponseNotFound(json.dumps({'message': 'No signature found with that id'}))
+        return JsonResponse(
+            {'message': 'No signature found with that id'}, status=404)
+
 
 def updates(request, id):
     if not id:
@@ -145,9 +196,11 @@ def updates(request, id):
     ujson = []
     upds = Update.objects.filter(pk__gt=id)
     for upd in upds:
-        ujson.append({"id": upd.pk, "name": upd.name, "info": upd.info, 
+        ujson.append({
+            "id": upd.pk, "name": upd.name, "info": upd.info,
             "date": upd.created_at.isoformat(), "tasks": upd.tasks})
-    return HttpResponse(json.dumps({"updates": ujson}))
+    return JsonResponse({"updates": ujson})
+
 
 @csrf_exempt
 def error(request):
@@ -155,21 +208,33 @@ def error(request):
         data = json.loads(request.body)
         try:
             if CrashReport.objects.filter(summary=data["summary"]):
-                return HttpResponse(json.dumps({'message': 'Your crash report has already been submitted. Developers will take care of it as soon as possible.'}), content_type='application/json')
-            c = CrashReport(summary=data["summary"], trace=data["trace"], 
-                version=data["version"], arch=data["arch"], report=data["report"])
+                return JsonResponse({
+                    'message': 'Your crash report has already been submitted.'
+                    ' Developers will take care of it as soon as possible.'})
+            c = CrashReport(
+                summary=data["summary"], trace=data["trace"],
+                version=data["version"], arch=data["arch"],
+                report=data["report"])
             c.save()
-            return HttpResponse(json.dumps({'message': 'Your crash report was submitted successfully.'}), content_type='application/json')
+            return JsonResponse({
+                'message': 'Your crash report was submitted successfully.'})
         except:
-            return HttpResponseServerError(json.dumps({'message': 'An unspecified server error occurred and your crash report couldn\'t be submitted. Please submit manually to the developers!'}), content_type='application/json')
-    return HttpResponseBadRequest(json.dumps({'message': 'Can only POST to this resource'}), content_type='application/json')
+            return JsonResponse({
+                'message': 'An unspecified server error occurred and your '
+                'crash report couldn\'t be submitted. Please submit manually '
+                'to the developers!'},
+                status='500')
+    return JsonResponse({
+        'message': 'Can only POST to this resource'}, status='422')
+
 
 def backup(obj):
     # Flag an existing object as a backup
     obj.BACKUP = True
     obj.save()
 
+
 def show_list(request):
     # Refresh and serve up the list of plugins
     pluginlist = reload_list()
-    return HttpResponse(json.dumps({"applications": pluginlist}), content_type='application/json')
+    return JsonResponse({"applications": pluginlist})

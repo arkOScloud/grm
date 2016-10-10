@@ -7,10 +7,7 @@ from models import Plugin, Theme, CrashReport, Update, UpdateSignature
 class PluginForm(forms.ModelForm):
     class Meta:
         model = Plugin
-
-class ThemeForm(forms.ModelForm):
-    class Meta:
-        model = Theme
+        fields = ['archive']
 
 class AdminPluginForm(admin.ModelAdmin):
     model = Plugin
@@ -31,14 +28,14 @@ class AdminUpdateForm(admin.ModelAdmin):
 class AdminUpdateSignatureForm(admin.ModelAdmin):
     model = UpdateSignature
     list_display = ('upd_id_list',)
-    
+
     def formfield_for_foreignkey(self, db_field, request=None, **kwargs):
         field = super(AdminUpdateSignatureForm, self).formfield_for_foreignkey(
             db_field, request, **kwargs)
         if db_field.rel.to == Update:
             field.label_from_instance = self.get_update_id
         return field
-    
+
     def upd_id_list(self, inst):
         return inst.update.pk
 
