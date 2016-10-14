@@ -154,11 +154,13 @@ def apps(request, id=""):
             p = Plugin.objects.get(PLUGIN_ID=id, BACKUP=False)
             if os.path.basename(p.PLUGIN_ID) == id:
                 try:
+                    p.downloads += 1
+                    p.save()
+                except:
+                    pass
+                try:
                     basename = os.path.basename(p.archive.path)
                     return HttpResponseRedirect("/media/{0}".format(basename))
-                except IOError:
-                    return JsonResponse(
-                        {'message': 'Unable to open the file'}, status=500)
                 except:
                     return JsonResponse(
                         {'message': 'Unexpected error'}, status=500)

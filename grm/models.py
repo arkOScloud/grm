@@ -1,18 +1,16 @@
 import os
 
-from django import forms
 from django.db import models
-from django.conf import settings
 
-from hashlib import sha1
-from random import random
 
 class Plugin(models.Model):
     name = models.CharField(max_length=255, default='Plugin')
     archive = models.FileField()
+    downloads = models.IntegerField()
     TYPE = models.CharField(max_length=255, default="")
     DESCRIPTION = models.CharField(max_length=255, default="")
-    LONG_DESCRIPTION = models.CharField(max_length=999999, default="", blank=True)
+    LONG_DESCRIPTION = models.CharField(
+        max_length=999999, default="", blank=True)
     CATEGORIES = models.CharField(max_length=999, default="")
     AUTHOR = models.CharField(max_length=255, default="")
     APP_AUTHOR = models.CharField(max_length=255, default="", blank=True)
@@ -29,6 +27,7 @@ class Plugin(models.Model):
     def __unicode__(self):
         return os.path.basename(self.archive.url)
 
+
 class Theme(models.Model):
     name = models.CharField(max_length=255, default='Theme')
     THEME_ID = models.CharField(max_length=255, default="")
@@ -38,10 +37,12 @@ class Theme(models.Model):
     VERSION = models.CharField(max_length=255, default="")
     HOMEPAGE = models.CharField(max_length=255, default="")
 
+
 class Image(models.Model):
     itype = models.CharField(default="", max_length=255)
     plugin = models.ForeignKey(Plugin, related_name='images')
     image = models.FileField()
+
 
 class CrashReport(models.Model):
     created_at = models.DateTimeField(auto_now=True)
@@ -51,11 +52,13 @@ class CrashReport(models.Model):
     version = models.TextField(max_length=255, default="")
     arch = models.TextField(max_length=255, default="")
 
+
 class Update(models.Model):
     created_at = models.DateTimeField(auto_now=True)
     info = models.TextField(max_length=99999, default="")
     name = models.TextField(max_length=255, default="")
     tasks = models.TextField(max_length=99999, default="")
+
 
 class UpdateSignature(models.Model):
     update = models.OneToOneField(Update, related_name='signature')
