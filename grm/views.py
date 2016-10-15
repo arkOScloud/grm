@@ -226,8 +226,7 @@ def error(request):
                 'crash report couldn\'t be submitted. Please submit manually '
                 'to the developers!'},
                 status='500')
-    return JsonResponse({
-        'message': 'Can only POST to this resource'}, status='422')
+    return JsonResponse({})
 
 
 def backup(obj):
